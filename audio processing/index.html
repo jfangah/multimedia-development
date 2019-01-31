@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <title>CSIT5110 Audio Processor</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
+
+    <!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+    <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <style>
+    .container { width: 1000px; margin-top: 60px }
+    .navbar-inverse .navbar-brand { color: white }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+        <div class="navbar-header">
+            <span class="navbar-brand">CSIT5110 Audio Processor</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                <audiocontroller id="audioController"/>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-xs-5 col-sm-5 col-md-5 col-lg-5">
+                <h4>General Settings</h4>
+            </div>
+            <div class="col-xs-7 col-sm-7 col-md-7 col-lg-7">
+                <h4>Playback and Visualization Controls</h4>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                <label for="waveform-frequency">Frequency:</label>
+                <div class="form-inline">
+                    <div class="form-group">
+                        <div class="input-group">
+                            <input class="form-control" id="waveform-frequency" type="number" value="256" min="1" step="1">
+                            <div class="input-group-addon">Hz</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                <label for="waveform-position">Stereo Position:</label>
+                <div class="form-inline">
+                    <div class="form-group">
+                        <div class="input-group">
+                            <div class="input-group-addon">Left</div>
+                            <input class="form-control" id="waveform-position" type="range" value="0.5" min="0" max="1" step="0.05">
+                            <div class="input-group-addon">Right</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xs-7 col-sm-7 col-md-7 col-lg-7">
+                <div class="btn-toolbar">
+                    <div class="btn-group">
+                        <button id="btnPlay" class="btn btn-success btn-large"><i class="glyphicon glyphicon-play"></i> Play</button>
+                        <button id="btnStop" class="btn btn-danger btn-large"><i class="glyphicon glyphicon-stop"></i> Stop</button>
+                    </div>
+                    <a class="btn btn-large btn-info" id="savelink" download="export.wav"><i class="glyphicon glyphicon-download"></i> Save</a>
+                    <a class="btn btn-large btn-primary" id="generateMusicFromMIDI" data-toggle="modal" data-target="#importMidiModal"><i class="glyphicon glyphicon-music"></i> Import MIDI</a>
+                </div>
+                <br />
+                <form class="form-inline">
+                    <label for="zoomLevel">Zoom To:</label>
+                    <select class="form-control" id="zoomLevel">
+                        <option value="1c">View 1 Cycle</option>
+                        <option value="100ms">View 0.1s</option>
+                        <option value="200ms">View 0.2s</option>
+                        <option value="1s">View 1s</option>
+                        <option value="all" selected>View All</option>
+                    </select>
+                    &nbsp;
+                    <label for="zoomStartFrom">starting from:</label>
+                    <div class="input-group">
+                        <input class="form-control" id="zoomStartFrom" disabled type="number" value="0" min="0" step="0.01" />
+                        <div class="input-group-addon">seconds</div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                &nbsp;
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                <!-- Nav tabs -->
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="dropdown active">
+                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">Waveform<br /><span class="title">Sine (Time Domain Method)</span>
+                        <span class="caret"></span></a>
+                        <ul class="dropdown-menu" id="waveform-dropdown-menu">
+                            <li role="presentation" class="active"><a class="waveform-type" href="#sine-time" role="tab" data-toggle="tab">Sine (Time Domain Method)</a></li>
+                            <li role="presentation"><a class="waveform-type" href="#clarinet-additive" role="tab" data-toggle="tab">Clarinet (Additive Method)</a></li>
+                            <li role="presentation"><a class="waveform-type" href="#fm" role="tab" data-toggle="tab">FM</a></li>
+                            <li role="presentation"><a class="waveform-type" href="#karplus-strong" role="tab" data-toggle="tab">Karplus-Strong Algorithm</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">Postprocessing 1<br /><span class="title"><i>Do Nothing</i></span>
+                        <span class="caret"></span></a>
+                        <ul class="dropdown-menu" id="pp1-dropdown-menu">
+                            <li role="presentation"><a data-pp="1" href="#no-pp" role="tab" data-toggle="tab"><i>Do Nothing</i></a></li>
+                            <li role="presentation"><a data-pp="1" href="#boost" role="tab" data-toggle="tab">Boost</a></li>
+                            <li role="presentation"><a data-pp="1" href="#tremolo" role="tab" data-toggle="tab">Tremolo</a></li>
+                            <li role="presentation"><a data-pp="1" href="#adsr" role="tab" data-toggle="tab">ADSR</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">Postprocessing 2<br /><span class="title"><i>Do Nothing</i></span>
+                        <span class="caret"></span></a>
+                        <ul class="dropdown-menu" id="pp2-dropdown-menu">
+                            <li role="presentation"><a data-pp="2" href="#no-pp" role="tab" data-toggle="tab"><i>Do Nothing</i></a></li>
+                            <li role="presentation"><a data-pp="2" href="#boost" role="tab" data-toggle="tab">Boost</a></li>
+                            <li role="presentation"><a data-pp="2" href="#tremolo" role="tab" data-toggle="tab">Tremolo</a></li>
+                            <li role="presentation"><a data-pp="2" href="#adsr" role="tab" data-toggle="tab">ADSR</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">Postprocessing 3<br /><span class="title"><i>Do Nothing</i></span>
+                        <span class="caret"></span></a>
+                        <ul class="dropdown-menu" id="pp3-dropdown-menu">
+                            <li role="presentation"><a data-pp="3" href="#no-pp" role="tab" data-toggle="tab"><i>Do Nothing</i></a></li>
+                            <li role="presentation"><a data-pp="3" href="#boost" role="tab" data-toggle="tab">Boost</a></li>
+                            <li role="presentation"><a data-pp="3" href="#tremolo" role="tab" data-toggle="tab">Tremolo</a></li>
+                            <li role="presentation"><a data-pp="3" href="#adsr" role="tab" data-toggle="tab">ADSR</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">Postprocessing 4<br /><span class="title"><i>Do Nothing</i></span>
+                        <span class="caret"></span></a>
+                        <ul class="dropdown-menu" id="pp1-dropdown-menu">
+                            <li role="presentation"><a data-pp="4" href="#no-pp" role="tab" data-toggle="tab"><i>Do Nothing</i></a></li>
+                            <li role="presentation"><a data-pp="4" href="#boost" role="tab" data-toggle="tab">Boost</a></li>
+                            <li role="presentation"><a data-pp="4" href="#tremolo" role="tab" data-toggle="tab">Tremolo</a></li>
+                            <li role="presentation"><a data-pp="4" href="#adsr" role="tab" data-toggle="tab">ADSR</a></li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <!-- Tab panes -->
+                <div class="tab-content">
+                    <div role="tabpanel" class="tab-pane active" id="sine-time">
+                        <h5>Parameters</h5>
+                        <p>No parameters avaliable</p>
+                    </div>
+                    <div role="tabpanel" class="tab-pane" id="clarinet-additive">
+                        <h5>Parameters</h5>
+                        <p>No parameters avaliable</p>
+                    </div>
+                    <div role="tabpanel" class="tab-pane" id="fm">
+                        <h5>Parameters</h5>
+                        <div class="row">
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <label for="fm-carrier-frequency">Carrier Frequency:</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <div class="input-group">
+                                            <input class="form-control" id="fm-carrier-frequency" type="number" value="256" min="1" step="1">
+                                            <div class="input-group-addon">Hz</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <label for="fm-carrier-amplitude">Carrier Amplitude:</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <input class="form-control" id="fm-carrier-amplitude" type="number" value="0.7" min="0" step="0.05">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <label for="fm-modulation-frequency">Modulation Frequency:</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <div class="input-group">
+                                            <input class="form-control" id="fm-modulation-frequency" type="number" value="10" min="1" step="1">
+                                            <div class="input-group-addon">Hz</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            &nbsp;
+                        </div>
+                        <div class="row">
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <label for="fm-modulation-amplitude">Modulation Amplitude:</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <input class="form-control" id="fm-modulation-amplitude" type="number" value="5" min="0" step="0.05">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <div class="form-inline">
+                                    <label for="fm-use-adsr">Use ADSR</label>
+                                    <div class="form-inline">
+                                        <div class="form-group">
+                                            <input class="form-control toggle-control" id="fm-use-adsr" type="checkbox" data-toggle-target="fm-adsr-attack-duration,fm-adsr-decay-duration,fm-adsr-release-duration,fm-adsr-sustain-level" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            &nbsp;
+                        </div>
+                        <div class="row">
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <label for="fm-adsr-attack-duration">Attack duration:</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <div class="input-group">
+                                            <input class="form-control" id="fm-adsr-attack-duration" disabled type="number" value="0.5" min="0" step="0.01">
+                                            <div class="input-group-addon">seconds</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <label for="fm-adsr-decay-duration">Decay duration:</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <div class="input-group">
+                                            <input class="form-control" id="fm-adsr-decay-duration" disabled type="number" value="0.5" min="0" step="0.01">
+                                            <div class="input-group-addon">seconds</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <label for="fm-adsr-sustain-level">Sustain level:</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <div class="input-group">
+                                            <input class="form-control" id="fm-adsr-sustain-level" disabled type="number" value="50" min="0" step="0.5" max="100.000000000000000000">
+                                            <div class="input-group-addon">%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <label for="fm-adsr-release-duration">Release duration:</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <div class="input-group">
+                                            <input class="form-control" id="fm-adsr-release-duration" disabled type="number" value="0.5" min="0" step="0.01">
+                                            <div class="input-group-addon">seconds</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div role="tabpanel" class="tab-pane" id="karplus-strong">
+                        <h5>Parameters</h5>
+                        <div class="row">
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <label for="karplus-base">Input:</label>
+                                <select class="form-control" id="karplus-base">
+                                    <option value="256hz-sine">256Hz Sine Wave</option>
+                                    <option value="white-noise">White Noise</option>
+                                </select>
+                            </div>
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <label for="karplus-p"><i>p</i>:</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <input class="form-control" id="karplus-p" type="number" value="100" min="5" step="1">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <label for="karplus-b"><i>b</i>:</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <input class="form-control" id="karplus-b" type="number" value="0.99" min="0" step="0.01">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div role="tabpanel" class="tab-pane" id="no-pp">
+                        <h5>Parameters</h5>
+                        <p>No parameters avaliable</p>
+                    </div>
+                    <div role="tabpanel" class="tab-pane" id="boost">
+                        <h5>Parameters</h5>
+                        <p>No parameters avaliable</p>
+                    </div>
+                    <div role="tabpanel" class="tab-pane" id="tremolo">
+                        <h5>Parameters</h5>
+                        <div class="row">
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <label for="tremolo-frequency">Frequency:</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <div class="input-group">
+                                            <input class="form-control" id="tremolo-frequency" type="number" value="10" min="1" step="1" data-p1="10" data-p2="10" data-p3="10" data-p4="10" data-active="p1">
+                                            <div class="input-group-addon">Hz</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <label for="tremolo-wetness">Wetness:</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <input class="form-control" id="tremolo-wetness" type="number" value="0.5" min="0.01" max="1" step="0.01" data-p1="0.5" data-p2="0.5" data-p3="0.5" data-p4="0.5" data-active="p1">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div role="tabpanel" class="tab-pane" id="adsr">
+                        <h5>Parameters</h5>
+                        <div class="row">
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <label for="adsr-attack-duration">Attack duration:</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <div class="input-group">
+                                            <input class="form-control" id="adsr-attack-duration" type="number" value="0.5" min="0" step="0.01" data-p1="0.5" data-p2="0.5" data-p3="0.5" data-p4="0.5" data-active="p1">
+                                            <div class="input-group-addon">seconds</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <label for="adsr-decay-duration">Decay duration:</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <div class="input-group">
+                                            <input class="form-control" id="adsr-decay-duration" type="number" value="0.5" min="0" step="0.01" data-p1="0.5" data-p2="0.5" data-p3="0.5" data-p4="0.5" data-active="p1">
+                                            <div class="input-group-addon">seconds</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <label for="adsr-sustain-level">Sustain level:</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <div class="input-group">
+                                            <input class="form-control" id="adsr-sustain-level" type="number" value="50" min="0" step="0.5" max="100.000000000000000000" data-p1="50" data-p2="50" data-p3="50" data-p4="50" data-active="p1">
+                                            <div class="input-group-addon">%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <label for="adsr-release-duration">Release duration:</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <div class="input-group">
+                                            <input class="form-control" id="adsr-release-duration" type="number" value="0.5" min="0" step="0.01" data-p1="0.5" data-p2="0.5" data-p3="0.5" data-p4="0.5" data-active="p1">
+                                            <div class="input-group-addon">seconds</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import MIDI Modal -->
+    <div class="modal" id="importMidiModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">Import MIDI</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                                <label for="importMidiURL">MIDI's JSON File</label>
+                                <input class="form-control" id="importMidiJSONFile" type="file" accept="application/json" />
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                                &nbsp;
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                                <label for="importMidiUseDuration">Use Note Duration from the JSON Input</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <input class="form-control" id="importMidiUseDuration" type="checkbox" checked />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                                <label for="importMidiEnablePostProcessing">Apply Postprocessing to Each Note (may be slower)</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <input class="form-control" id="importMidiEnablePostProcessing" type="checkbox" checked />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                                &nbsp;
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                                <label for="importMidiPitchShift">Pitch Shift:</label>
+                                <div class="input-group">
+                                    <span class="input-group-btn">
+                                        <button type="button" class="btn btn-default spin-control" data-spin-target="importMidiPitchShift" data-delta="-1">
+                                            <span class="glyphicon glyphicon-minus"></span>
+                                        </button>
+                                    </span>
+                                    <input class="form-control toggle-control" data-disable-if="0" data-toggle-target="importMidiOverlapAmount,importMidiSOLAMaximumShiftAmount" id="importMidiPitchShift" type="number" min="-12" max="12" value="0" step="1" />
+                                    <span class="input-group-btn">
+                                        <button type="button" class="btn btn-default spin-control" data-spin-target="importMidiPitchShift" data-delta="1">
+                                            <span class="glyphicon glyphicon-plus"></span>
+                                        </button>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                                &nbsp;
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                                <label for="importMidiAutoAmplitude">Automatically Boost the Amplitude of the Entire Music</label>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <input class="form-control" id="importMidiAutoAmplitude" type="checkbox" checked />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="btnImportMIDI">Import MIDI and Generate Music</button>
+                    <a class="btn btn-large btn-info disabled" id="saveMidiLink" download="export.wav"><i class="glyphicon glyphicon-download"></i> Save Music</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <br />
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
+
+    <script src="js/utility.js"></script>
+    <script src="js/binaryToolkit.js"></script>
+    <script src="js/waveTrack.js"></script>
+    <script src="js/waveformGenerator.js"></script>
+    <script src="js/postprocessor.js"></script>
+    <script src="js/audioPlayback.js"></script>
+    <script src="js/audioSequence.js"></script>
+    <script src="js/channel.js"></script>
+    <script src="js/audioController.js"></script>
+    <script src="js/pitchShift.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
